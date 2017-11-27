@@ -11,9 +11,9 @@
         android:id="@+id/pathField"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="/"
-        android:onClick="onClick"
-        android:clickable="true"/>
+        android:maxLines="1"
+        android:inputType="text"
+        android:text="/" />
 
     <ExpandableListView
         android:id="@+id/lvExp"

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Vector;
 
 import android.app.Activity;
+import android.content.Context;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
@@ -20,6 +21,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.w3c.dom.Text;
+
 import static android.content.ContentValues.TAG;
 
 public class MainActivity extends Activity {
@@ -31,6 +34,8 @@ public class MainActivity extends Activity {
     HashMap<String, List<String>> listDataChild;
     View marked;
     Boolean manualInput = false;
+    Context c = this;
+    Boolean manualClose = true;
 
     int currGroup = -1;
     int currChild = -1;
@@ -70,6 +75,71 @@ public class MainActivity extends Activity {
 
             @Override
             public void afterTextChanged(Editable editable) {
+                String input = editable.toString();
+                String[] parts = input.split("/");
+
+
+                if(parts.length < 2)
+                    return;
+
+                String group = parts[1].toLowerCase();
+
+                Boolean groupFound = false;
+                for(int i=0; i<listDataHeader.size(); i++){
+                    if(group.equals(listDataHeader.get(i).toLowerCase())){
+
+
+                        if(!expListView.isGroupExpanded(i)) {
+                            closeAllGroups();
+                            expListView.expandGroup(i);
+                        }
+
+                        groupFound = true;
+                        break;
+                    } else if(listDataHeader.get(i).toLowerCase().contains(group)){
+                        pathTextView.setBackgroundColor(Color.WHITE);
+                        groupFound = true;
+                    }
+                }
+
+                if(!groupFound){
+                    pathTextView.setBackgroundColor(Color.RED);
+                    deselectAll();
+                    return;
+                }
+
+                if(parts.length<3)
+                    return;
+
+                boolean nodeFound = false;
+                String groupString = "";
+                for(int i=0; i<expListView.getChildCount(); i++){
+                    LinearLayout node = (LinearLayout) expListView.getChildAt(i);
+                    TextView text = (TextView) node.getChildAt(0);
+
+                    if(text.getId() == R.id.lblListHeader){
+                        groupString = text.getText().toString().toLowerCase();
+                    } else {
+                        String nodePath = "/"+groupString+"/"+text.getText().toString().toLowerCase();
+
+
+                        if(input.equals(nodePath)){
+                            deselectAll();
+                            node.setBackgroundColor(Color.GREEN);
+                            nodeFound = true;
+                        } else if(nodePath.contains(input)){
+                            nodeFound = true;
+                        }
+
+                    }
+                }
+
+                if(nodeFound){
+                    pathTextView.setBackgroundColor(Color.WHITE);
+                } else {
+                    pathTextView.setBackgroundColor(Color.RED);
+                    deselectAll();
+                }
 
             }
         };
@@ -87,56 +157,56 @@ public class MainActivity extends Activity {
                 pathTextView.setText(path.toLowerCase());
                 pathTextView.addTextChangedListener(textWatcher);
 
-                currGroup = groupPosition;
-                currChild = childPosition;
+                deselectAll();
+                v.setBackgroundColor(Color.GREEN);
 
-                Log.d(TAG, "group: "+currGroup+ ", child: " + currChild);
 
                 return false;
             }
         });
 
+        ExpandableListView.OnGroupExpandListener groupExpandListener = new ExpandableListView.OnGroupExpandListener() {
 
-        expListView.setOnGroupExpandListener(new ExpandableListView.OnGroupExpandListener() {
-            @Override
             public void onGroupExpand(int i) {
-                fixMarking();
+                if(manualClose) {
+                    Log.d(TAG, "onGroupExpand: DESELECTING");
+                    deselectAll();
+                }
             }
 
-        });
-        expListView.setOnGroupCollapseListener(new ExpandableListView.OnGroupCollapseListener() {
+        };
+
+        ExpandableListView.OnGroupCollapseListener groupCollapseListener = new ExpandableListView.OnGroupCollapseListener() {
             @Override
             public void onGroupCollapse(int i) {
-                fixMarking();
+                if(manualClose) {
+                    Log.d(TAG, "onGroupCollapse: DESELECTING");
+                    deselectAll();
+                }
             }
-        });
+
+        };
+
+        expListView.setOnGroupExpandListener(groupExpandListener);
+        expListView.setOnGroupCollapseListener(groupCollapseListener);
     }
 
-    private void fixMarking(){
-        int groupNr = -1;
-        int childNr = -1;
-
-
-
-        Log.d(TAG, "No Nodes: " + expListView.getChildCount());
-        for (int i = 0; i < expListView.getChildCount(); i++) {
-
-
-            LinearLayout child = (LinearLayout) expListView.getChildAt(i);
-            TextView text = (TextView) child.getChildAt(0);
-            child.setBackgroundColor(Color.TRANSPARENT);
-
-            if(text.getId() == R.id.lblListHeader){
-                groupNr++;
-                childNr = -1;
-            } else {
-                childNr++;
-            }
-
-            //Log.d(TAG, "GroupNr: " + groupNr + ", ChildNr: " + childNr);
-
-
+    private void closeAllGroups(){
+        manualClose = false;
+        for(int i=0; i<expListView.getChildCount();i++){
+            expListView.collapseGroup(i);
         }
+        manualClose = true;
+    }
+
+    private void deselectAll(){
+
+        for(int i=0; i<expListView.getChildCount(); i++){
+            LinearLayout child = (LinearLayout) expListView.getChildAt(i);
+
+            child.setBackgroundColor(Color.TRANSPARENT);
+        }
+
     }
 
 
